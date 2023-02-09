@@ -59,9 +59,9 @@ func TestDecisionTask(t *testing.T) {
 	      "chainOfTrust": true,
 	      "taskclusterProxy": true
 	    },
-		"capabilities": {
-			"privileged": true
-		},
+	    "capabilities": {
+	      "privileged": true
+	    },
 	    "image": "mozillareleases/gecko_decision:4.0.0@sha256:9f69fe08c28e3cb3cc296451f0a2735df6e25d0e3c877ea735ef1b7f0b345b06",
 	    "maxRunTime": 3600
 	  }

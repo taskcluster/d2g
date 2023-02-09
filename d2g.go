@@ -99,7 +99,7 @@ func podmanRunCommand(containerName string, payload *dockerworker.DockerWorkerPa
 	command.WriteString(createVolumeMountsString(payload.Cache, wdcs))
 	command.WriteString(" --add-host=taskcluster:127.0.0.1 --net=host")
 	command.WriteString(podmanEnvMappings(payload.Env))
-	command.WriteString(" " + string(payload.Image))
+	command.WriteString(createDockerImageString(&payload.Image))
 	command.WriteString(" " + shell.Escape(payload.Command...))
 	return command.String()
 }
@@ -164,6 +164,66 @@ func createVolumeMountsString(payloadCache map[string]string, wdcs []genericwork
 
 func podmanEnvSetting(envVarName, envVarValue string) string {
 	return ` -e "` + envVarName + "=" + envVarValue + `"`
+}
+
+func createDockerImageString(payloadImage *json.RawMessage) string {
+	var parsed interface{}
+	err := json.Unmarshal(*payloadImage, &parsed)
+	if err != nil {
+		// should we panic here?
+		panic("Bug - cannot parse docker image: " + err.Error())
+	}
+
+	// One of:
+	//   * DockerImageName (string)
+	//   * NamedDockerImage (struct)
+	//   * IndexedDockerImage (struct)
+	//   * DockerImageArtifact (struct)
+	// For the structs, we have to check keys to determine
+	switch val := parsed.(type) {
+	case string: // DockerImageName
+		return " " + shell.Escape(val)
+	case map[string]interface{}: // NamedDockerImage|IndexedDockerImage|DockerImageArtifact
+		// NamedDockerImage
+		if val["name"] != nil {
+			namedDockerImage := dockerworker.NamedDockerImage{}
+			err = json.Unmarshal(*payloadImage, &namedDockerImage)
+			if err != nil {
+				// should we panic here?
+				panic("Bug - cannot parse NamedDockerImage: " + err.Error())
+			}
+			return " " + shell.Escape(namedDockerImage.Name)
+		}
+
+		// IndexedDockerImage
+		if val["namespace"] != nil {
+			indexDockerImage := dockerworker.IndexedDockerImage{}
+			err = json.Unmarshal(*payloadImage, &indexDockerImage)
+			if err != nil {
+				// should we panic here?
+				panic("Bug - cannot parse IndexedDockerImage: " + err.Error())
+			}
+			// TODO: fix
+			return " " + shell.Escape(indexDockerImage.Path)
+		}
+
+		// DockerImageArtifact
+		if val["taskId"] != nil {
+			dockerImageArtifact := dockerworker.DockerImageArtifact{}
+			err = json.Unmarshal(*payloadImage, &dockerImageArtifact)
+			if err != nil {
+				// should we panic here?
+				panic("Bug - cannot parse DockerImageArtifact: " + err.Error())
+			}
+			// TODO: fix
+			return " " + shell.Escape(dockerImageArtifact.Path)
+		}
+
+		// should we panic here?
+		panic("Bug - parsed docker image is not of a supported type. " + err.Error())
+	default:
+		panic("Bug - parsed docker image is not of a supported type: " + err.Error())
+	}
 }
 
 func podmanEnvMappings(payloadEnv map[string]string) string {
