@@ -1,9 +1,12 @@
 package d2g
 
-import "github.com/taskcluster/d2g/genericworker"
+import (
+	"github.com/taskcluster/d2g/genericworker"
+	"github.com/taskcluster/shell"
+)
 
-func (ndi *NamedDockerImage) PrepareCommands() [][]string {
-	return [][]string{}
+func (ndi *NamedDockerImage) PrepareCommands() []string {
+	return []string{}
 }
 
 func (ndi *NamedDockerImage) FileMounts() ([]genericworker.FileMount, error) {
@@ -11,5 +14,5 @@ func (ndi *NamedDockerImage) FileMounts() ([]genericworker.FileMount, error) {
 }
 
 func (ndi *NamedDockerImage) String() (string, error) {
-	return ndi.Name, nil
+	return shell.Escape(ndi.Name), nil
 }

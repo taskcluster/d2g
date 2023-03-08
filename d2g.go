@@ -26,7 +26,7 @@ type (
 	NamedDockerImage    dockerworker.NamedDockerImage
 	DockerImageArtifact dockerworker.DockerImageArtifact
 	Image               interface {
-		PrepareCommands() [][]string
+		PrepareCommands() []string
 		FileMounts() ([]genericworker.FileMount, error)
 		String() (string, error)
 	}
@@ -113,20 +113,29 @@ func artifacts(artifacts map[string]dockerworker.Artifact) []genericworker.Artif
 
 func command(payload *dockerworker.DockerWorkerPayload, dwImage Image, gwArtifacts []genericworker.Artifact, gwWritableDirectoryCaches []genericworker.WritableDirectoryCache) ([][]string, error) {
 	containerName := "taskcontainer"
+
+	podmanPrepareCommands := dwImage.PrepareCommands()
+
 	podmanRunString, err := podmanRunCommand(containerName, payload, dwImage, gwWritableDirectoryCaches)
 	if err != nil {
 		return nil, fmt.Errorf("could not form podman run command: %w", err)
 	}
-	commands := []string{
+
+	commands := append(
+		podmanPrepareCommands,
 		podmanRunString,
 		"exit_code=$?",
-	}
-	commands = append(commands, podmanCopyArtifacts(containerName, payload, gwArtifacts)...)
+	)
+	commands = append(
+		commands,
+		podmanCopyArtifacts(containerName, payload, gwArtifacts)...,
+	)
 	commands = append(
 		commands,
 		"podman rm "+containerName,
 		`exit "${exit_code}"`,
 	)
+
 	return [][]string{
 		{
 			"bash",
@@ -149,7 +158,7 @@ func podmanRunCommand(containerName string, payload *dockerworker.DockerWorkerPa
 	if err != nil {
 		return "", fmt.Errorf("could not form docker image string: %w", err)
 	}
-	command.WriteString(" " + shell.Escape(dockerImageString))
+	command.WriteString(" " + dockerImageString)
 	command.WriteString(" " + shell.Escape(payload.Command...))
 	return command.String(), nil
 }

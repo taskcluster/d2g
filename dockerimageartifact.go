@@ -7,9 +7,9 @@ import (
 	"github.com/taskcluster/d2g/genericworker"
 )
 
-func (dia *DockerImageArtifact) PrepareCommands() [][]string {
-	return [][]string{
-		{"podman", "load"},
+func (dia *DockerImageArtifact) PrepareCommands() []string {
+	return []string{
+		"IMAGE_NAME=$(podman load -i image.tar | sed -n 's/.*: //p')",
 	}
 }
 
@@ -26,10 +26,11 @@ func (dia *DockerImageArtifact) FileMounts() ([]genericworker.FileMount, error) 
 	return []genericworker.FileMount{
 		{
 			Content: json.RawMessage(raw),
+			File:    "image.tar",
 		},
 	}, nil
 }
 
 func (dia *DockerImageArtifact) String() (string, error) {
-	return "", nil
+	return `"${IMAGE_NAME}"`, nil
 }

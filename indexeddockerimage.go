@@ -2,8 +2,8 @@ package d2g
 
 import "github.com/taskcluster/d2g/genericworker"
 
-func (idi *IndexedDockerImage) PrepareCommands() [][]string {
-	return [][]string{}
+func (idi *IndexedDockerImage) PrepareCommands() []string {
+	return []string{}
 }
 
 func (idi *IndexedDockerImage) FileMounts() ([]genericworker.FileMount, error) {
