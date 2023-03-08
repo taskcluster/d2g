@@ -21,7 +21,7 @@ func (dia *DockerImageArtifact) FileMounts() ([]genericworker.FileMount, error) 
 	}
 	raw, err := json.MarshalIndent(&artifactContent, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("Cannot marshal artifact content %#v into json: %w", artifactContent, err)
+		return nil, fmt.Errorf("cannot marshal artifact content %#v into json: %w", artifactContent, err)
 	}
 	return []genericworker.FileMount{
 		{

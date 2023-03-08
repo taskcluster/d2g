@@ -74,7 +74,8 @@ func Convert(dwPayload *dockerworker.DockerWorkerPayload) (gwPayload *genericwor
 func mounts(gwWritableDirectoryCaches []genericworker.WritableDirectoryCache, gwFileMounts []genericworker.FileMount) (result []json.RawMessage, err error) {
 	result = make([]json.RawMessage, 0, len(gwWritableDirectoryCaches)+len(gwFileMounts))
 	marshalAndAddToSlice := func(i interface{}) {
-		bytes, err := json.Marshal(i)
+		var bytes []byte
+		bytes, err = json.Marshal(i)
 		if err != nil {
 			err = fmt.Errorf("cannot convert a genericworker.WritableDirectoryCache to json: %w", err)
 			return
