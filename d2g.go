@@ -22,7 +22,7 @@ var dwManagedEnvVars = []string{
 // Dev notes: https://docs.google.com/document/d/1QNfHVpxtzXAlLWqZNz3b5mvbQWOrtsWpvadJHiMNbRc/edit#heading=h.uib8l9zhaz1n
 
 func Convert(payload *dockerworker.DockerWorkerPayload) *genericworker.GenericWorkerPayload {
-	gwArtifacts := artifacts(payload.Artifacts)
+	gwArtifacts := artifacts(payload)
 	gwWritableDirectoryCaches := writableDirectoryCaches(payload.Cache)
 	return &genericworker.GenericWorkerPayload{
 		Artifacts:     gwArtifacts,
@@ -49,22 +49,32 @@ func mounts(gwWritableDirectoryCaches []genericworker.WritableDirectoryCache) []
 	return result
 }
 
-func artifacts(artifacts map[string]dockerworker.Artifact) []genericworker.Artifact {
-	gwArtifacts := make([]genericworker.Artifact, len(artifacts))
-	names := make([]string, len(artifacts))
+func artifacts(payload dockerworker.DockerWorkerPayload) []genericworker.Artifact {
+	gwArtifacts := make([]genericworker.Artifact, len(payload.Artifacts))
+	names := make([]string, len(payload.Artifacts))
 	i := 0
-	for name := range artifacts {
+	for name := range payload.Artifacts {
 		names[i] = name
 		i++
 	}
 	sort.Strings(names)
 	for i, name := range names {
 		gwArtifacts[i] = genericworker.Artifact{
-			Expires: artifacts[name].Expires,
+			Expires: payload.Artifacts[name].Expires,
 			Name:    name,
 			Path:    "artifact" + strconv.Itoa(i),
-			Type:    artifacts[name].Type,
+			Type:    payload.Artifacts[name].Type,
 		}
+	}
+	if payload.Features.DockerSave {
+		gwArtifacts = append(
+			gwArtifacts,
+			genericworker.Artifact{
+				Name: "public/dockerImage.tar",
+				Path: "image.tar",
+				Type: "file",
+			},
+		)
 	}
 	return gwArtifacts
 }
@@ -76,6 +86,12 @@ func command(payload *dockerworker.DockerWorkerPayload, gwArtifacts []genericwor
 		"exit_code=$?",
 	}
 	commands = append(commands, podmanCopyArtifacts(containerName, payload, gwArtifacts)...)
+	if payload.Features.DockerSave {
+		commands = append(
+			commands,
+			"podman save -o image.tar "+containerName,
+		)
+	}
 	commands = append(
 		commands,
 		"podman rm "+containerName,
